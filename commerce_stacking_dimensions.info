@@ -1,6 +1,5 @@
 name = Commerce Stacking Dimensions
 description = A user interface that adds a field to selected product types that track how a quantity of a product should be determined.
-version = 7.x-1.x
 core = 7.x
 
 dependencies[] = commerce

@@ -2,12 +2,70 @@
 
 /**
  * @file
- * Module file that declares the paths for the UI and generally holds all functions.
+ * Declares the paths for the UI and holds all functions.
  */
 
 /**
- * Implements hook_menu()
+ * Implements hook_menu().
  */
-function commerce_stacking_dimension_menu() {
+function commerce_stacking_dimensions_menu() {
+  $items = array();
 
+  $items['admin/commerce/config/stacking'] = array(
+    'title' => 'Stacking Products',
+    'description' => 'Choose product types to enable a stacking mode during
+                      dimension calculations.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('commerce_stacking_dimensions_form'),
+    'access arguments' => array('configure store'),
+  );
+
+  return $items;
+}
+
+/**
+ * Returns the form for editing the product types that can be stacked.
+ *
+ * @param array $form
+ *   A form object.
+ * @param array $form_state
+ *   The updated object if loaded after being submitted.
+ *
+ * @return mixed
+ *   Returns the final form structure.
+ */
+function commerce_stacking_dimensions_form($form, &$form_state) {
+
+  $form['description'] = array(
+    '#markup' => '<p>' . t('Choose product types to add dimension fields to that
+                          track how multiple products, when stacked, change
+                          their dimension.') . '</p>',
+  );
+
+  // Load product types and simplify.
+  $product_types = commerce_product_types();
+  foreach ($product_types as $id => $type) {
+    $product_types[$id] = $type['name'];
+  }
+
+  $form['commerce_stacking_dimensions_product_types'] = array(
+    '#type' => 'checkboxes',
+    '#title' => 'Product Types',
+    '#options' => $product_types,
+    '#default_value' => variable_get('commerce_stacking_dimensions_product_types', array()),
+  );
+
+  $form['submit_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save Changes'),
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_form_submit().
+ */
+function commerce_stacking_dimensions_form_submit($form, &$form_state) {
+  variable_set('commerce_stacking_dimensions_product_types', array_filter($form_state['values']['commerce_stacking_dimensions_product_types']));
 }
