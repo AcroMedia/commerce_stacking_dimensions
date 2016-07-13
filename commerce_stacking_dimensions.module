@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * @file
+ * Module file that declares the paths for the UI and generally holds all functions.
+ */
+
+/**
+ * Implements hook_menu()
+ */
+function commerce_stacking_dimension_menu() {
+
+}
