@@ -102,7 +102,6 @@ function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$vol
   if ($volume === NULL) {
     return;
   }
-  return;
 
   $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
   $volume = NULL;
