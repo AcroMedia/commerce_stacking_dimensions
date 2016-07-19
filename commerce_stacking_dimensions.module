@@ -67,5 +67,25 @@ function commerce_stacking_dimensions_form($form, &$form_state) {
  * Implements hook_form_submit().
  */
 function commerce_stacking_dimensions_form_submit($form, &$form_state) {
-  variable_set('commerce_stacking_dimensions_product_types', array_filter($form_state['values']['commerce_stacking_dimensions_product_types']));
+  $old = variable_get('commerce_stacking_dimensions_product_types', array());
+  $new = array_filter($form_state['values']['commerce_stacking_dimensions_product_types']);
+  variable_set('commerce_stacking_dimensions_product_types', $new);
+
+  // Delete field instances that are attached to old and not in new
+  $remove = array_diff($old,$new);
+  if($remove) { foreach ($remove as $bundle) {
+    $instance = field_info_instance('commerce_product','stacking_dimensions',$bundle);
+    field_delete_instance($instance, FALSE);
+  }}
+
+  // Add field instances to new and not in old
+  $add = array_diff($new,$old);
+  if ($add) { foreach ($add as $bundle) {
+    field_create_instance(array(
+      "label" => "Stacking Dimensions",
+      "field_name" => "stacking_dimensions",
+      "entity_type" => "commerce_product",
+      "bundle" => $bundle,
+    ));
+  }}
 }
