@@ -102,6 +102,7 @@ function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$vol
   if ($volume === NULL) {
     return;
   }
+  return;
 
   $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
   $volume = NULL;
@@ -122,7 +123,7 @@ function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$vol
           // Step 2: Determine if product type has stacking dimensions field.
           if (array_key_exists("stacking_dimensions", $line_item_wrapper->commerce_product->getPropertyInfo())) {
             // Step 3: Review dimensions that change per quantity.
-            $stacking_dimensions = $line_item_wrapper->commerce_product->stacking_dimensions->value()[0];
+            $stacking_dimensions = $line_item_wrapper->commerce_product->stacking_dimensions->value();
             $reset_quantity = FALSE;
             foreach (array_keys($converted_dimensions) as $type) {
               // Step 4: Modify each dimension by quantity.
