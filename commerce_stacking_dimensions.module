@@ -89,3 +89,64 @@ function commerce_stacking_dimensions_form_submit($form, &$form_state) {
     ));
   }}
 }
+
+/**
+ * Implements hook_commerce_physical_order_volume_alter().
+ */
+function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$volume, $order, $unit) {
+  // Skip our reset if there is no volume.
+  if ($volume === NULL) return;
+
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $volume = NULL;
+
+  // Loop over each line item on the order.
+  foreach ($order_wrapper->commerce_line_items as $delta => $line_item_wrapper) {
+    // Get the dimensions value of product line items.
+    if (in_array($line_item_wrapper->type->value(), commerce_product_line_item_types())) {
+      $line_item_dimensions = commerce_physical_product_line_item_dimensions($line_item_wrapper->value());
+
+      // Add it to the running total converting it to the required weight unit.
+      if (!physical_field_is_empty($line_item_dimensions, array('type' => 'physical_dimensions'))) {
+        $converted_dimensions = physical_dimensions_convert($line_item_dimensions, $unit);
+        $quantity = $line_item_wrapper->quantity->value();
+
+        // Step 1: Determine if more than one, possible stacking line item.
+        if (round($quantity,0) > 1) {
+          // Step 2: Determine if this product type has stacking dimensions field.
+          if (array_key_exists("stacking_dimensions",$line_item_wrapper->commerce_product->getPropertyInfo())) {
+            // Step 3: Review dimensions that change per quantity.
+            $stacking_dimensions = $line_item_wrapper->commerce_product->stacking_dimensions->value()[0];
+            $reset_quantity = false;
+            foreach (array_keys($converted_dimensions) as $type) {
+              // Step 4: Modify each dimension by quantity.
+              if ($type != "unit" AND round($stacking_dimensions[$type],0) > 0) {
+                // Skip zeros, exclude original dimension from multiplication.
+                $converted_dimensions[$type] = $converted_dimensions[$type] + ($stacking_dimensions[$type] * ($quantity - 1));
+
+                // Reset quantity only if a stacking dimension was set.
+                $reset_quantity = true;
+              }
+            }
+            // Reset the quantity because the quantity has already been used.
+            if ($reset_quantity) $quantity = 1;
+          }
+        }
+
+        $converted_dimensions['volume'] = $converted_dimensions['width'] * $converted_dimensions['length'] * $converted_dimensions['height'] * $quantity;
+
+        if (empty($volume['volume'])) {
+          // Create a volume value array using the converted unit type.
+          $volume = array(
+            'volume' => $converted_dimensions['volume'],
+            'unit' => $unit,
+          );
+        }
+        else {
+          $volume['volume'] += $converted_dimensions['volume'];
+        }
+      }
+    }
+    // No return needed, &$volume is going to be returned by the original hook.
+  }
+}

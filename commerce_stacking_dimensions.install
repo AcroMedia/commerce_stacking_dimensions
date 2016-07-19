@@ -12,7 +12,7 @@ function commerce_stacking_dimensions_install() {
   field_create_field(array(
     'field_name' => 'stacking_dimensions',
     'type' => 'physical_dimensions',
-    'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+    'cardinality' => 1,
     'module' => 'physical',
     'active' => 1,
   ));
