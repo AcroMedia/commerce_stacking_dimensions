@@ -71,23 +71,27 @@ function commerce_stacking_dimensions_form_submit($form, &$form_state) {
   $new = array_filter($form_state['values']['commerce_stacking_dimensions_product_types']);
   variable_set('commerce_stacking_dimensions_product_types', $new);
 
-  // Delete field instances that are attached to old and not in new
-  $remove = array_diff($old,$new);
-  if($remove) { foreach ($remove as $bundle) {
-    $instance = field_info_instance('commerce_product','stacking_dimensions',$bundle);
-    field_delete_instance($instance, FALSE);
-  }}
+  // Delete field instances that are attached to old and not in new.
+  $remove = array_diff($old, $new);
+  if ($remove) {
+    foreach ($remove as $bundle) {
+      $instance = field_info_instance('commerce_product', 'stacking_dimensions', $bundle);
+      field_delete_instance($instance, FALSE);
+    }
+  }
 
-  // Add field instances to new and not in old
-  $add = array_diff($new,$old);
-  if ($add) { foreach ($add as $bundle) {
-    field_create_instance(array(
-      "label" => "Stacking Dimensions",
-      "field_name" => "stacking_dimensions",
-      "entity_type" => "commerce_product",
-      "bundle" => $bundle,
-    ));
-  }}
+  // Add field instances to new and not in old.
+  $add = array_diff($new, $old);
+  if ($add) {
+    foreach ($add as $bundle) {
+      field_create_instance(array(
+        "label" => "Stacking Dimensions",
+        "field_name" => "stacking_dimensions",
+        "entity_type" => "commerce_product",
+        "bundle" => $bundle,
+      ));
+    }
+  }
 }
 
 /**
@@ -95,13 +99,15 @@ function commerce_stacking_dimensions_form_submit($form, &$form_state) {
  */
 function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$volume, $order, $unit) {
   // Skip our reset if there is no volume.
-  if ($volume === NULL) return;
+  if ($volume === NULL) {
+    return;
+  }
 
   $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
   $volume = NULL;
 
   // Loop over each line item on the order.
-  foreach ($order_wrapper->commerce_line_items as $delta => $line_item_wrapper) {
+  foreach ($order_wrapper->commerce_line_items as $line_item_wrapper) {
     // Get the dimensions value of product line items.
     if (in_array($line_item_wrapper->type->value(), commerce_product_line_item_types())) {
       $line_item_dimensions = commerce_physical_product_line_item_dimensions($line_item_wrapper->value());
@@ -112,24 +118,26 @@ function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$vol
         $quantity = $line_item_wrapper->quantity->value();
 
         // Step 1: Determine if more than one, possible stacking line item.
-        if (round($quantity,0) > 1) {
-          // Step 2: Determine if this product type has stacking dimensions field.
-          if (array_key_exists("stacking_dimensions",$line_item_wrapper->commerce_product->getPropertyInfo())) {
+        if (round($quantity, 0) > 1) {
+          // Step 2: Determine if product type has stacking dimensions field.
+          if (array_key_exists("stacking_dimensions", $line_item_wrapper->commerce_product->getPropertyInfo())) {
             // Step 3: Review dimensions that change per quantity.
             $stacking_dimensions = $line_item_wrapper->commerce_product->stacking_dimensions->value()[0];
-            $reset_quantity = false;
+            $reset_quantity = FALSE;
             foreach (array_keys($converted_dimensions) as $type) {
               // Step 4: Modify each dimension by quantity.
-              if ($type != "unit" AND round($stacking_dimensions[$type],0) > 0) {
+              if ($type != "unit" && round($stacking_dimensions[$type], 0) > 0) {
                 // Skip zeros, exclude original dimension from multiplication.
                 $converted_dimensions[$type] = $converted_dimensions[$type] + ($stacking_dimensions[$type] * ($quantity - 1));
 
                 // Reset quantity only if a stacking dimension was set.
-                $reset_quantity = true;
+                $reset_quantity = TRUE;
               }
             }
             // Reset the quantity because the quantity has already been used.
-            if ($reset_quantity) $quantity = 1;
+            if ($reset_quantity) {
+              $quantity = 1;
+            }
           }
         }
 
