@@ -37,9 +37,11 @@ function commerce_stacking_dimensions_menu() {
 function commerce_stacking_dimensions_form($form, &$form_state) {
 
   $form['description'] = array(
-    '#markup' => '<p>' . t('Choose product types to add dimension fields to that
-                          track how multiple products, when stacked, change
-                          their dimension.') . '</p>',
+    '#markup' => '<p>' . t('Choose product types to add stacking dimension
+                            fields that track how a single product\'s dimensions
+                            change when stacked as a quantity of more than
+                            one. Note: This is not meant to work with stacking
+                            multiple kinds of products together.') . '</p>',
   );
 
   // Load product types and simplify.
