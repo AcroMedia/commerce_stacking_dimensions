@@ -53,6 +53,9 @@ function commerce_stacking_dimensions_form($form, &$form_state) {
     '#title' => 'Product Types',
     '#options' => $product_types,
     '#default_value' => variable_get('commerce_stacking_dimensions_product_types', array()),
+    '#description' => '<br><hr><br><em>'.t('WARNING: Unchecking a particular product type and 
+                         saving the changes <strong>WILL</strong> remove the stacking dimension
+                         fields and data. This is your only warning.').'</em>',
   );
 
   $form['submit_button'] = array(
@@ -78,6 +81,8 @@ function commerce_stacking_dimensions_form_submit($form, &$form_state) {
       $instance = field_info_instance('commerce_product', 'stacking_dimensions', $bundle);
       field_delete_instance($instance, FALSE);
     }
+    drupal_set_message(format_plural(count($remove),"The stacking dimension field on @bundles was removed.",
+      "The stacking dimension field on the following @count bundles were removed: @bundles",array('@bundles' => implode(", ", $remove))), 'status');
   }
 
   // Add field instances to new and not in old.
@@ -91,6 +96,8 @@ function commerce_stacking_dimensions_form_submit($form, &$form_state) {
         "bundle" => $bundle,
       ));
     }
+    drupal_set_message(format_plural(count($add),"@bundles now has a stacking dimension field.",
+      "A new stacking dimension field was added to these @count bundles: @bundles",array('@bundles' => implode(", ", $add))), 'status');
   }
 }
 
