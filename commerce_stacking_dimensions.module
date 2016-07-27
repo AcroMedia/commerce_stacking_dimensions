@@ -166,4 +166,7 @@ function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$vol
     }
     // No return needed, &$volume is going to be returned by the original hook.
   }
+
+  // Allow other modules to hook in and alter the volume.
+  drupal_alter('order_volume', $volume, $order, $unit);
 }
