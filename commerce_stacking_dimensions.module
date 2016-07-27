@@ -132,6 +132,8 @@ function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$vol
           if (array_key_exists("stacking_dimensions", $line_item_wrapper->commerce_product->getPropertyInfo())) {
             // Step 3: Review dimensions that change per quantity.
             $stacking_dimensions = $line_item_wrapper->commerce_product->stacking_dimensions->value();
+            // Convert to same unit as line item.
+            $stacking_dimensions = physical_dimensions_convert($stacking_dimensions, $unit);
             $reset_quantity = FALSE;
             foreach (array_keys($converted_dimensions) as $type) {
               // Step 4: Modify each dimension by quantity.
