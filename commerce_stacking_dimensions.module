@@ -123,7 +123,7 @@ function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$vol
 
       // Add it to the running total converting it to the required weight unit.
       if (!physical_field_is_empty($line_item_dimensions, array('type' => 'physical_dimensions'))) {
-        $converted_dimensions = physical_dimensions_convert($line_item_dimensions, $unit);
+        $product_dimensions = physical_dimensions_convert($line_item_dimensions, $unit);
         $quantity = $line_item_wrapper->quantity->value();
 
         // Step 1: Determine if more than one, possible stacking line item.
@@ -134,35 +134,83 @@ function commerce_stacking_dimensions_commerce_physical_order_volume_alter(&$vol
             $stacking_dimensions = $line_item_wrapper->commerce_product->stacking_dimensions->value();
             // Convert to same unit as line item.
             $stacking_dimensions = physical_dimensions_convert($stacking_dimensions, $unit);
-            $reset_quantity = FALSE;
-            foreach (array_keys($converted_dimensions) as $type) {
-              // Step 4: Modify each dimension by quantity.
-              if ($type != "unit" && round($stacking_dimensions[$type], 0) > 0) {
-                // Skip zeros, exclude original dimension from multiplication.
-                $converted_dimensions[$type] = $converted_dimensions[$type] + ($stacking_dimensions[$type] * ($quantity - 1));
 
-                // Reset quantity only if a stacking dimension was set.
-                $reset_quantity = TRUE;
+            // To figure out our new volume, we have to know how many unstacked
+            // products we will need to put in packages. Ultimately, this should
+            // come from a settings page and not an assumption of UPS.
+            $default_package['length'] = variable_get('commerce_ups_default_package_size_length', '0');
+            $default_package['width'] = variable_get('commerce_ups_default_package_size_width', '0');
+            $default_package['height'] = variable_get('commerce_ups_default_package_size_height', '0');
+            $default_package_volume =  $default_package['length'] * $default_package['width'] * $default_package['height'];
+
+            $full_package_dimensions = $product_dimensions; // start with whole product
+
+            $whole_packages = 1;
+
+            // Foreach quantity, determine the volume and add either a stacking
+            // dimension or a full product.
+            for ($stacked_products = 0; $stacked_products < $quantity; $stacked_products++) {
+              // Our newest dimensions will change our volume
+              $new_dimensions = $full_package_dimensions;
+              $new_dimensions['length'] += $stacking_dimensions['length'];
+              $new_dimensions['height'] += $stacking_dimensions['height'];
+              $new_dimensions['width'] += $stacking_dimensions['width'];
+              $new_volume = $new_dimensions['length'] * $new_dimensions['width'] * $new_dimensions['height'];
+
+              // If the new volume won't fit, then we now know how many products
+              // we can stack per default package.
+              if ($new_volume > $default_package_volume) {
+                break;
+              } else {
+                $full_package_dimensions = $new_dimensions;
               }
             }
-            // Reset the quantity because the quantity has already been used.
-            if ($reset_quantity) {
-              $quantity = 1;
+            // If the number of products would stack more than the default volume,
+            // we determine how many packages we would end up with based on the
+            // number of packages that would fit. (10 would fit, but we have 23,
+            // so the $whole_packages = 2.3, in other words, we would require 3
+            // packages to fit all of the products.)
+            if ($quantity > $stacked_products) {
+              $products_per_default_package = $stacked_products + 1;
+              $whole_packages = ceil($quantity / $products_per_default_package);
+              // Divide all stacked products across all whole packages.
+              // Since we can't cut products, we have to assume we have enough
+              // to always over stack by 1 for each package. This will inflate
+              // the volume, but the alternative is to estimate less than
+              // reality. We are erring on the side of more, not less.
+              $evenly_distributed_stacked_products = ceil($stacked_products / $whole_packages);
+            } else {
+              $evenly_distributed_stacked_products = $stacked_products;
             }
+
+            // Reset dimensions to include stacked per package.
+            // For example, 10 products can fit into a default package, and we
+            // now know we need 3 default packages to fit all quantity.
+            // So the new product dimensions is the full product plus the 4
+            // evenly distributed stacked dimensions across the 3 sets of stacked
+            // products. 1 original height + (stacked height * 4)
+            foreach (array("length","width","height") as $type) {
+              if ($stacking_dimensions[$type] > 0) {
+                $product_dimensions[$type] += $stacking_dimensions[$type] * $evenly_distributed_stacked_products;
+              }
+            }
+            // Reset quantity to the "evenly distributed" packages in order to
+            // reflect that the new dimensions include X number of products.
+            $quantity = $whole_packages;
           }
         }
 
-        $converted_dimensions['volume'] = $converted_dimensions['width'] * $converted_dimensions['length'] * $converted_dimensions['height'] * $quantity;
+        $product_dimensions['volume'] = $product_dimensions['width'] * $product_dimensions['length'] * $product_dimensions['height'] * $quantity;
 
         if (empty($volume['volume'])) {
           // Create a volume value array using the converted unit type.
           $volume = array(
-            'volume' => $converted_dimensions['volume'],
+            'volume' => $product_dimensions['volume'],
             'unit' => $unit,
           );
         }
         else {
-          $volume['volume'] += $converted_dimensions['volume'];
+          $volume['volume'] += $product_dimensions['volume'];
         }
       }
     }
